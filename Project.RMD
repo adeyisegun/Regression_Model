@@ -1,0 +1,100 @@
+---
+title: "Regression Models Course Project"
+date: "7/15/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Executive summary
+
+Motor Trend(a magazine about the automobile industry) is Looking at a data set of a collection of cars, they are interested in exploring the relationship between a set of variables and miles per gallon (MPG) (outcome). They are particularly interested in the following two questions:
+
+- “Is an automatic or manual transmission better for MPG”
+- "Quantify the MPG difference between automatic and manual transmissions"
+
+## Exploratory data analyses
+```{r}
+library(datasets)
+data("mtcars")
+
+#Let's take a look at the data to get acquainted with the contents.
+head(mtcars)
+summary(mtcars)
+```
+
+**Average MPG difference between automatic and manual transmissions**
+```{r}
+mpg_mean <- data.frame(aggregate(list(mean = mtcars$mpg), list(group = mtcars$am), mean), 
+      Transmission = c("automatic", "manual"))
+mpg_mean
+abs(mpg_mean$mean[1] - mpg_mean$mean[2])
+```
+***MPG difference*** `r abs(mpg_mean$mean[1] - mpg_mean$mean[2])`
+
+**Boxplot to show relation between MPG and Transmission**
+```{r fig.height=4, fig.width=5}
+boxplot(mpg ~ factor(am), data = mtcars, main = "Transmission Vs MPG", 
+        xlab = "Transmission (0=Automatic,1=Manual)")
+```
+
+***From the box plot we already see that Manual Transmission is better for MPG.***
+
+Furthermore, we are going to do a t-test, fit models, draw inference, and detail our strategy, then arrive at a conclusion.
+
+## T-Test
+```{r}
+t.test(mpg~am, mtcars)
+```
+
+With p-value of 0.001374 we reject the null Hypothesis. Hence, there is difference in transmission type.
+
+## Fit Model
+We fit a linear model with MPG as the outcome and transmission as the predictor
+```{r}
+fit1 <- lm(mpg ~ factor(am), data = mtcars)
+summary(fit1)
+```
+Here we see that the p-value is very small, However, if take a good look the the value for Multiple R-squared, we will see that the measure of the linear relationship between our predictor variable and our response is very low, this suggests that only `r summary(fit1)$adj.r.squared` of variance in MPG can be attributed to transmission.
+
+## Model Selection
+The strategy for model selection is to perform step-wise regression/model selection algorithm.
+
+```{r}
+fit2 <- lm(mpg ~ ., data = mtcars)
+best_fit2 <- step(fit2, direction = "both", trace = FALSE)
+best_fit2$call
+```
+
+Now we can fit the linear model and view inference results with the following
+
+```{r}
+fit3 <- lm(formula = mpg ~ factor(am) + wt + qsec, data = mtcars)
+summary(fit3)
+```
+
+Now we see that we have better value of Multiple R-squared showing us that we have a relatively better model
+
+## Residual Plot
+We can check if regression assumptions are met with diagnostic plotting:
+
+```{r}
+# generate diagnostic plots in 2 x 2 panels
+par(mfrow = c(2, 2)); plot(fit3)
+```
+
+- Residuals vs Fitted: Here we see that linearity seems not to hold reasonably well
+- Normal Q-Q: The points approximately fall on the line and they follow the diagonal fairly close.
+- Scale-Location: The residuals begin to spread slightly wider along the x-axis as it passes around 25
+- Residuals vs Leverage: No high leverage points.
+
+## Conclusion
+The best transmission type for MPG would have to be the manual transmission. we have confirmed by the t-test, and with our final linear model. 
+
+By choosing a manual transmission instead of automatic the MPG will increase by `r summary(fit3)$coefficients[2,1]`, as seen our selected model.
+
+Alternatively we can also say that, by choosing a manual transmission instead of automatic we are 95% confident that our increase in MPG will fall with this range `r confint(fit3)[2]` & `r confint(fit3)[6]`.
